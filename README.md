@@ -1,20 +1,52 @@
-# VIBRUN 食事管理アプリ(実装土台)
+# VIBRUN 食事管理アプリ
 
-VIBRUN会員向け食事管理アプリの実装土台です。Claude上のプロトタイプ(アーティファクト)で検証した機能・データ構造を、実際にデプロイできる構成(Vite + React / Vercel サーバーレス関数 / Upstash Redis)に移植する最初のステップとして、バックエンド(API + データ層)を用意しました。
+VIBRUN会員向け食事管理アプリです。Claude上のプロトタイプ(アーティファクト)で検証した機能・データ構造を、実際にデプロイできる構成(Vite + React / Vercel サーバーレス関数 / Upstash Redis)に移植したものです。
 
 ## 今の状態(できていること)
 
 - プロジェクトの雛形(Vite + React + Tailwind)
 - Upstash Redisとの接続層(`lib/redis.js`)
 - 食材・商品・会員データを読み書きするAPIエンドポイント一式
-- 認証は仮実装(`x-user-id` ヘッダーをそのまま信用する状態。LINEログイン導入前の疎通確認用)
-- フロントエンドは疎通確認用の最小画面のみ(`src/App.jsx`)。プロトタイプのUIコンポーネントはまだ移植していません
+- 会員モード・トレーナーモードのUI一式(`src/App.jsx` 以下)を移植済み。`window.storage` の呼び出しは `src/lib/api.js` 経由の `fetch('/api/...')` に置き換え済み
+- 認証は仮実装(`x-user-id` ヘッダーをそのまま信用する状態。LINEログイン導入前の暫定運用)
+
+### 仮の認証・トレーナー権限について
+
+LINEログインがまだないため、画面で入力した名前がそのまま `x-user-id` として送られます(`src/App.jsx`)。一度入力すると、その端末にブラウザの`localStorage`で保存され、次回以降は自動的に同じ名前でログインした状態になります。
+
+トレーナー権限を持たせたい人は、その人が入力した名前を **半角スペース等が `_` に置き換わった状態**で `.env` の `TRAINER_LINE_USER_IDS` に追加してください(本番環境では Vercel の Environment Variables に追加)。例えば「立川 歩」と入力した場合のキーは `立川_歩` になります。
+
+```
+TRAINER_LINE_USER_IDS=立川_歩,別のトレーナー名
+```
 
 ## まだできていないこと(次のステップ)
 
-1. プロトタイプ(アーティファクト)のUIコンポーネントをこのプロジェクトに移植し、`window.storage` の呼び出しを `fetch('/api/...')` に置き換える
-2. LINEログイン(LIFF)の導入。`lib/auth.js` の `getUserId()` を、LINEのIDトークンを検証する実装に差し替える
-3. トレーナー権限の付与方法の整備(`TRAINER_LINE_USER_IDS` への手動追加、または管理画面での権限管理)
+1. LINEログイン(LIFF)の導入。`lib/auth.js` の `getUserId()` を、LINEのIDトークンを検証する実装に差し替える。あわせて `src/App.jsx` の「名前を入力」画面をLIFFログインに置き換える
+2. トレーナー権限の付与方法の整備(管理画面からの権限管理など、`TRAINER_LINE_USER_IDS` の手動編集以外の方法)
+
+## フロントエンドの構成
+
+```
+src/
+  App.jsx                     # 起点。名前入力(仮ログイン)・会員/トレーナー切り替え
+  lib/
+    api.js                    # バックエンドAPI呼び出し(旧 window.storage の置き換え)
+    helpers.js                # 定数・日付処理などのユーティリティ
+  components/
+    NameGate.jsx               # 名前入力画面(仮ログイン)
+    MemberDashboard.jsx        # 会員ダッシュボード + 商品登録セクション
+    TrainerView.jsx            # トレーナー画面(会員一覧・食材/商品管理)
+    Widgets.jsx                 # 共通UI部品(ゲージ・お皿ビジュアル・食事記録フォームなど)
+```
+
+## ローカルでの動作確認
+
+`/api` を含めてフロント・バックエンドをまとめて動かすには、`npm run dev` ではなく **直接** 以下を実行してください(`npm run dev` は `vite` のみを起動するため、`/api` エンドポイントは動きません)。
+
+```bash
+npx vercel dev
+```
 
 ## セットアップ
 
@@ -36,15 +68,15 @@ cp .env.example .env
 
 ### 3. ローカルで起動
 
-サーバーレス関数(`/api`)も含めて動かすには `vercel dev` を使います(`vite` 単体だと `/api` は動きません)。
+サーバーレス関数(`/api`)も含めて動かすには `vercel dev` を使います(`npm run dev` は `vite` のみを起動するので `/api` は動きません)。
 
 ```bash
 npx vercel login   # 初回のみ
 npx vercel link     # 初回のみ、Vercelのプロジェクトと紐付け
-npm run dev          # vercel dev が起動します
+npx vercel dev       # フロント + /api をまとめて起動
 ```
 
-ブラウザで表示される画面が「食材データベースを108件読み込みました」と出れば、Vite → Vercel Functions → Upstash Redis の疎通ができています。
+会員として名前を入力し、記録画面が表示されれば疎通できています。
 
 ### 4. 動作確認(疎通していない場合)
 

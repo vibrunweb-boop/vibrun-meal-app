@@ -1,10 +1,10 @@
 import { AuthError, getUserId } from '../lib/auth.js';
-import { loadMemberData, saveMemberData, ensureRegistered } from '../lib/memberData.js';
+import { loadMemberData, saveMemberData, ensureRegistered, DEFAULT_TARGETS } from '../lib/memberData.js';
 
 export default async function handler(req, res) {
   try {
     const userId = getUserId(req);
-    const displayName = req.headers['x-user-name'] || userId;
+    const displayName = req.headers['x-user-name'] ? decodeURIComponent(req.headers['x-user-name']) : userId;
     await ensureRegistered(userId, displayName);
 
     if (req.method === 'GET') {
@@ -26,7 +26,13 @@ export default async function handler(req, res) {
     }
 
     if (req.method === 'DELETE') {
-      const { id } = req.body;
+      const { id, resetAll } = req.body;
+      if (resetAll) {
+        // 「このデータをリセット」ボタン用: 記録と目標値をすべて初期状態に戻す
+        const fresh = { targets: { ...DEFAULT_TARGETS }, meals: [] };
+        await saveMemberData(userId, fresh);
+        return res.status(200).json(fresh);
+      }
       const data = await loadMemberData(userId);
       const updated = { ...data, meals: data.meals.filter((m) => m.id !== id) };
       await saveMemberData(userId, updated);
