@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { COLORS, sanitizeKey } from './lib/helpers.js';
+import * as api from './lib/api.js';
 import NameGate from './components/NameGate.jsx';
 import MemberDashboard from './components/MemberDashboard.jsx';
 import TrainerView from './components/TrainerView.jsx';
@@ -10,6 +11,7 @@ export default function App() {
   const [mode, setMode] = useState('member');
   const [identity, setIdentity] = useState(null); // { key, displayName }
   const [checkedStorage, setCheckedStorage] = useState(false);
+  const [isTrainer, setIsTrainer] = useState(false);
 
   // LINEログイン導入前の仮実装: 一度入力した名前をこの端末に保存しておき、
   // 次回以降は自動的にログインした状態にします。
@@ -20,6 +22,32 @@ export default function App() {
     } catch (e) {}
     setCheckedStorage(true);
   }, []);
+  // ログイン中の名前がトレーナー(TRAINER_LINE_USER_IDS)かどうかをサーバーに確認し、
+  // トレーナーでなければ「トレーナー」タブ自体を表示しないようにします。
+  useEffect(() => {
+    if (!identity) {
+      setIsTrainer(false);
+      return;
+    }
+    let cancelled = false;
+    api
+      .checkIsTrainer(identity.key)
+      .then((res) => {
+        if (cancelled) return;
+        const trainer = !!res.isTrainer;
+        setIsTrainer(trainer);
+        if (!trainer) setMode('member');
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setIsTrainer(false);
+          setMode('member');
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [identity]);
 
   const enterAs = (name) => {
     const next = { key: sanitizeKey(name), displayName: name };
@@ -50,7 +78,7 @@ export default function App() {
           <h1 style={{ fontFamily: "'Shippori Mincho', serif", color: COLORS.ink }} className="text-2xl">
             食事ノート
           </h1>
-          {identity && (
+          {identity && isTrainer && (
             <div className="flex rounded-full p-0.5" style={{ background: COLORS.border }}>
               <button
                 onClick={() => setMode('member')}

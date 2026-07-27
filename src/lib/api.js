@@ -105,3 +105,7 @@ export function fetchTrainerMembers(trainerId) {
 export function fetchTrainerMemberDetail(trainerId, memberUserId) {
   return request(`/api/trainer/member-detail?userId=${encodeURIComponent(memberUserId)}`, { userId: trainerId });
 }
+
+export function checkIsTrainer(userId) {
+  return request('/api/trainer/check', { userId });
+}
