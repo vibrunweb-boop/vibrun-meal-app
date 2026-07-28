@@ -1,10 +1,9 @@
-import { AuthError, getUserId } from '../lib/auth.js';
+import { AuthError, verifyLineToken } from '../lib/auth.js';
 import { loadMemberData, saveMemberData, ensureRegistered, DEFAULT_TARGETS } from '../lib/memberData.js';
 
 export default async function handler(req, res) {
   try {
-    const userId = getUserId(req);
-    const displayName = req.headers['x-user-name'] ? decodeURIComponent(req.headers['x-user-name']) : userId;
+    const { userId, displayName } = await verifyLineToken(req);
     await ensureRegistered(userId, displayName);
 
     if (req.method === 'GET') {
