@@ -6,7 +6,7 @@ import { AuthError, getUserId, isTrainer } from '../../lib/auth.js';
 export default async function handler(req, res) {
   try {
     if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
-    const userId = getUserId(req);
+    const userId = await getUserId(req);
     return res.status(200).json({ isTrainer: isTrainer(userId) });
   } catch (err) {
     if (err instanceof AuthError) return res.status(401).json({ error: err.message });

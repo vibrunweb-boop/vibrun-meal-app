@@ -1,15 +1,12 @@
 // バックエンドAPI呼び出しをまとめたデータ層。
-// プロトタイプ(meal-tracker.jsx)の window.storage 呼び出しを置き換えるものです。
 //
-// 認証はLINEログイン導入前の仮実装です。App.jsx で入力された名前をそのまま
-// x-user-id / x-user-name ヘッダーとして送信しています(lib/auth.js 参照)。
-// トレーナー権限は、Vercelの環境変数 TRAINER_LINE_USER_IDS にそのキーを
-// 登録することで付与されます(README参照)。
+// 認証: LIFFで取得したIDトークンを Authorization: Bearer ヘッダーで送ります。
+// サーバー側は lib/auth.js でこのトークンをLINEに照会して検証し、
+// 検証済みのLINEユーザーID・表示名を取得します。
 
-async function request(path, { userId, displayName, method = 'GET', body } = {}) {
+async function request(path, { idToken, method = 'GET', body } = {}) {
   const headers = { 'Content-Type': 'application/json' };
-  if (userId) headers['x-user-id'] = encodeURIComponent(userId);
-  if (displayName) headers['x-user-name'] = encodeURIComponent(displayName);
+  if (idToken) headers['Authorization'] = `Bearer ${idToken}`;
 
   const res = await fetch(path, {
     method,
@@ -31,29 +28,24 @@ async function request(path, { userId, displayName, method = 'GET', body } = {})
 
 // --- 会員の食事記録・目標値 --------------------------------------------
 
-export function fetchMemberData(userId, displayName) {
-  return request('/api/meals', { userId, displayName });
+export function fetchMemberData(idToken) {
+  return request('/api/meals', { idToken });
 }
 
-export function addMealEntry(userId, displayName, mealType, date, entry) {
-  return request('/api/meals', {
-    userId,
-    displayName,
-    method: 'POST',
-    body: { mealType, date, ...entry },
-  });
+export function addMealEntry(idToken, mealType, date, entry) {
+  return request('/api/meals', { idToken, method: 'POST', body: { mealType, date, ...entry } });
 }
 
-export function deleteMealEntry(userId, id) {
-  return request('/api/meals', { userId, method: 'DELETE', body: { id } });
+export function deleteMealEntry(idToken, id) {
+  return request('/api/meals', { idToken, method: 'DELETE', body: { id } });
 }
 
-export function resetMemberData(userId) {
-  return request('/api/meals', { userId, method: 'DELETE', body: { resetAll: true } });
+export function resetMemberData(idToken) {
+  return request('/api/meals', { idToken, method: 'DELETE', body: { resetAll: true } });
 }
 
-export function updateTargets(userId, targets) {
-  return request('/api/targets', { userId, method: 'PUT', body: targets });
+export function updateTargets(idToken, targets) {
+  return request('/api/targets', { idToken, method: 'PUT', body: targets });
 }
 
 // --- 食材データベース ----------------------------------------------------
@@ -62,16 +54,16 @@ export function fetchIngredientDb() {
   return request('/api/ingredients');
 }
 
-export function createIngredient(trainerId, item) {
-  return request('/api/ingredients', { userId: trainerId, method: 'POST', body: item });
+export function createIngredient(idToken, item) {
+  return request('/api/ingredients', { idToken, method: 'POST', body: item });
 }
 
-export function updateIngredient(trainerId, id, fields) {
-  return request('/api/ingredients', { userId: trainerId, method: 'PUT', body: { id, ...fields } });
+export function updateIngredient(idToken, id, fields) {
+  return request('/api/ingredients', { idToken, method: 'PUT', body: { id, ...fields } });
 }
 
-export function deleteIngredient(trainerId, id) {
-  return request('/api/ingredients', { userId: trainerId, method: 'DELETE', body: { id } });
+export function deleteIngredient(idToken, id) {
+  return request('/api/ingredients', { idToken, method: 'DELETE', body: { id } });
 }
 
 // --- 商品データベース ----------------------------------------------------
@@ -80,32 +72,32 @@ export function fetchProductDb() {
   return request('/api/products');
 }
 
-export function registerOrUpdateProduct(userId, displayName, item) {
-  return request('/api/products', { userId, displayName, method: 'POST', body: item });
+export function registerOrUpdateProduct(idToken, item) {
+  return request('/api/products', { idToken, method: 'POST', body: item });
 }
 
-export function incrementProductUseCount(userId, id) {
-  return request('/api/products', { userId, method: 'PATCH', body: { id } });
+export function incrementProductUseCount(idToken, id) {
+  return request('/api/products', { idToken, method: 'PATCH', body: { id } });
 }
 
-export function updateProductAdmin(trainerId, id, fields) {
-  return request('/api/products', { userId: trainerId, method: 'PUT', body: { id, ...fields } });
+export function updateProductAdmin(idToken, id, fields) {
+  return request('/api/products', { idToken, method: 'PUT', body: { id, ...fields } });
 }
 
-export function deleteProductAdmin(trainerId, id) {
-  return request('/api/products', { userId: trainerId, method: 'DELETE', body: { id } });
+export function deleteProductAdmin(idToken, id) {
+  return request('/api/products', { idToken, method: 'DELETE', body: { id } });
 }
 
 // --- トレーナー専用 -------------------------------------------------------
 
-export function fetchTrainerMembers(trainerId) {
-  return request('/api/trainer/members', { userId: trainerId });
+export function fetchTrainerMembers(idToken) {
+  return request('/api/trainer/members', { idToken });
 }
 
-export function fetchTrainerMemberDetail(trainerId, memberUserId) {
-  return request(`/api/trainer/member-detail?userId=${encodeURIComponent(memberUserId)}`, { userId: trainerId });
+export function fetchTrainerMemberDetail(idToken, memberUserId) {
+  return request(`/api/trainer/member-detail?userId=${encodeURIComponent(memberUserId)}`, { idToken });
 }
 
-export function checkIsTrainer(userId) {
-  return request('/api/trainer/check', { userId });
+export function checkIsTrainer(idToken) {
+  return request('/api/trainer/check', { idToken });
 }

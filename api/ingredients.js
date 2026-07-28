@@ -21,7 +21,7 @@ export default async function handler(req, res) {
     }
 
     // 追加・編集・削除はトレーナーのみ
-    requireTrainer(req);
+    await requireTrainer(req);
     const list = (await redis.get(KEY)) || [];
 
     if (req.method === 'POST') {

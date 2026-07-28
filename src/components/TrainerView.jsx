@@ -229,7 +229,7 @@ function DataManagementView({ trainerId }) {
   };
 
   const createProduct = async (form) => {
-    await api.registerOrUpdateProduct(trainerId, 'トレーナー', {
+    await api.registerOrUpdateProduct(trainerId, {
       name: form.name.trim(),
       store: form.store?.trim() || '',
       barcode: form.barcode?.trim() || '',

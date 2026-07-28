@@ -191,7 +191,7 @@ export default function MemberDashboard({ ownerId, viewerId, displayName, readOn
         const d = await api.fetchTrainerMemberDetail(viewerId, ownerId);
         setData(d);
       } else {
-        const d = await api.fetchMemberData(viewerId, displayName);
+        const d = await api.fetchMemberData(viewerId);
         setData(d);
         const [ing, prod] = await Promise.all([api.fetchIngredientDb(), api.fetchProductDb()]);
         setIngredientDb(ing);
@@ -218,7 +218,7 @@ export default function MemberDashboard({ ownerId, viewerId, displayName, readOn
   };
 
   const registerProduct = async (entry) => {
-    const { isNew } = await api.registerOrUpdateProduct(viewerId, displayName, entry);
+    const { isNew } = await api.registerOrUpdateProduct(viewerId, entry);
     const fresh = await api.fetchProductDb();
     setProductDb(fresh);
     return isNew;
@@ -246,7 +246,7 @@ export default function MemberDashboard({ ownerId, viewerId, displayName, readOn
 
   const addMeal = async (mealType, entry) => {
     try {
-      const meal = await api.addMealEntry(viewerId, displayName, mealType, selectedDate, entry);
+      const meal = await api.addMealEntry(viewerId, mealType, selectedDate, entry);
       setData((prev) => ({ ...prev, meals: [...prev.meals, meal] }));
     } catch (err) {
       console.error(err);

@@ -13,7 +13,7 @@ export default async function handler(req, res) {
 
     if (req.method === 'POST') {
       // 会員・トレーナーどちらも登録可能(コンビニ・スーパー商品をみんなのデータベースに登録)
-      const userId = getUserId(req);
+      const userId = await getUserId(req);
       const { name, store, barcode, calories, protein, fat, carbs, fiber, salt, nutrients } = req.body;
       if (!name || !String(name).trim()) {
         return res.status(400).json({ error: '商品名は必須です' });
@@ -69,7 +69,7 @@ export default async function handler(req, res) {
 
     if (req.method === 'PATCH') {
       // 食事記録で既存の登録商品を選んだ時の利用回数カウント(人気順の参考値)
-      getUserId(req);
+      await getUserId(req);
       const { id } = req.body;
       const list = (await redis.get(KEY)) || [];
       const updated = list.map((p) => (p.id === id ? { ...p, useCount: (p.useCount || 1) + 1 } : p));
@@ -79,7 +79,7 @@ export default async function handler(req, res) {
 
     if (req.method === 'PUT') {
       // トレーナー管理画面からの直接編集
-      requireTrainer(req);
+      await requireTrainer(req);
       const { id, ...fields } = req.body;
       const list = (await redis.get(KEY)) || [];
       const updated = list.map((p) => (p.id === id ? { ...p, ...fields, updatedAt: Date.now() } : p));
@@ -88,7 +88,7 @@ export default async function handler(req, res) {
     }
 
     if (req.method === 'DELETE') {
-      requireTrainer(req);
+      await requireTrainer(req);
       const { id } = req.body;
       const list = (await redis.get(KEY)) || [];
       const updated = list.filter((p) => p.id !== id);

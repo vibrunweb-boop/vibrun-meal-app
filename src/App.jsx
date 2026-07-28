@@ -1,29 +1,17 @@
-import { useState, useEffect } from 'react';
-import { COLORS, sanitizeKey } from './lib/helpers.js';
+import { useState, useEffect, useCallback } from 'react';
+import { COLORS } from './lib/helpers.js';
 import * as api from './lib/api.js';
-import NameGate from './components/NameGate.jsx';
+import LiffGate from './components/LiffGate.jsx';
 import MemberDashboard from './components/MemberDashboard.jsx';
 import TrainerView from './components/TrainerView.jsx';
 
-const IDENTITY_STORAGE_KEY = 'vibrun-identity';
-
 export default function App() {
   const [mode, setMode] = useState('member');
-  const [identity, setIdentity] = useState(null); // { key, displayName }
-  const [checkedStorage, setCheckedStorage] = useState(false);
+  const [identity, setIdentity] = useState(null); // { idToken, userId, displayName, pictureUrl }
   const [isTrainer, setIsTrainer] = useState(false);
 
-  // LINEログイン導入前の仮実装: 一度入力した名前をこの端末に保存しておき、
-  // 次回以降は自動的にログインした状態にします。
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem(IDENTITY_STORAGE_KEY);
-      if (saved) setIdentity(JSON.parse(saved));
-    } catch (e) {}
-    setCheckedStorage(true);
-  }, []);
-  // ログイン中の名前がトレーナー(TRAINER_LINE_USER_IDS)かどうかをサーバーに確認し、
-  // トレーナーでなければ「トレーナー」タブ自体を表示しないようにします。
+  const handleReady = useCallback((next) => setIdentity(next), []);
+
   useEffect(() => {
     if (!identity) {
       setIsTrainer(false);
@@ -31,7 +19,7 @@ export default function App() {
     }
     let cancelled = false;
     api
-      .checkIsTrainer(identity.key)
+      .checkIsTrainer(identity.idToken)
       .then((res) => {
         if (cancelled) return;
         const trainer = !!res.isTrainer;
@@ -48,23 +36,6 @@ export default function App() {
       cancelled = true;
     };
   }, [identity]);
-
-  const enterAs = (name) => {
-    const next = { key: sanitizeKey(name), displayName: name };
-    try {
-      localStorage.setItem(IDENTITY_STORAGE_KEY, JSON.stringify(next));
-    } catch (e) {}
-    setIdentity(next);
-  };
-
-  const switchIdentity = () => {
-    try {
-      localStorage.removeItem(IDENTITY_STORAGE_KEY);
-    } catch (e) {}
-    setIdentity(null);
-  };
-
-  if (!checkedStorage) return null;
 
   return (
     <div className="min-h-screen" style={{ background: COLORS.bg }}>
@@ -83,20 +54,14 @@ export default function App() {
               <button
                 onClick={() => setMode('member')}
                 className="px-3 py-1.5 rounded-full text-xs font-medium transition"
-                style={{
-                  background: mode === 'member' ? COLORS.terracotta : 'transparent',
-                  color: mode === 'member' ? '#fff' : COLORS.inkSoft,
-                }}
+                style={{ background: mode === 'member' ? COLORS.terracotta : 'transparent', color: mode === 'member' ? '#fff' : COLORS.inkSoft }}
               >
                 会員
               </button>
               <button
                 onClick={() => setMode('trainer')}
                 className="px-3 py-1.5 rounded-full text-xs font-medium transition"
-                style={{
-                  background: mode === 'trainer' ? COLORS.terracotta : 'transparent',
-                  color: mode === 'trainer' ? '#fff' : COLORS.inkSoft,
-                }}
+                style={{ background: mode === 'trainer' ? COLORS.terracotta : 'transparent', color: mode === 'trainer' ? '#fff' : COLORS.inkSoft }}
               >
                 トレーナー
               </button>
@@ -105,24 +70,17 @@ export default function App() {
         </div>
 
         {!identity ? (
-          <NameGate onEnter={enterAs} />
+          <LiffGate onReady={handleReady} />
+        ) : mode === 'trainer' ? (
+          <TrainerView trainerId={identity.idToken} />
         ) : (
-          <>
-            <button onClick={switchIdentity} style={{ color: COLORS.inkSoft }} className="text-xs mb-3 underline">
-              別の名前に切り替える
-            </button>
-            {mode === 'trainer' ? (
-              <TrainerView trainerId={identity.key} />
-            ) : (
-              <MemberDashboard ownerId={identity.key} viewerId={identity.key} displayName={identity.displayName} readOnly={false} />
-            )}
-          </>
+          <MemberDashboard
+            ownerId={identity.idToken}
+            viewerId={identity.idToken}
+            displayName={identity.displayName}
+            readOnly={false}
+          />
         )}
-
-        <p style={{ color: COLORS.inkSoft }} className="text-[10px] text-center mt-8 leading-relaxed">
-          ※ 認証はLINEログイン導入前の仮実装です。トレーナー権限は、この画面で入力した名前を
-          Vercelの環境変数 TRAINER_LINE_USER_IDS に登録することで付与されます。
-        </p>
       </div>
     </div>
   );

@@ -3,7 +3,7 @@ import { loadMemberData } from '../../lib/memberData.js';
 
 export default async function handler(req, res) {
   try {
-    requireTrainer(req);
+    	await requireTrainer(req);
     if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
 
     const { userId } = req.query;
