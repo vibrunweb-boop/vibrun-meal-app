@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { COLORS } from './lib/helpers.js';
 import * as api from './lib/api.js';
 import LiffGate from './components/LiffGate.jsx';
+import ConsentGate from './components/ConsentGate.jsx';
 import MemberDashboard from './components/MemberDashboard.jsx';
 import TrainerView from './components/TrainerView.jsx';
 
@@ -69,18 +70,22 @@ export default function App() {
           )}
         </div>
 
-        {!identity ? (
-          <LiffGate onReady={handleReady} />
-        ) : mode === 'trainer' ? (
-          <TrainerView trainerId={identity.idToken} />
-        ) : (
-          <MemberDashboard
-            ownerId={identity.idToken}
-            viewerId={identity.idToken}
-            displayName={identity.displayName}
-            readOnly={false}
-          />
-        )}
+       {!identity ? (
+  <LiffGate onReady={handleReady} />
+) : (
+  <ConsentGate idToken={identity.idToken}>
+    {mode === 'trainer' ? (
+      <TrainerView trainerId={identity.idToken} />
+    ) : (
+      <MemberDashboard
+        ownerId={identity.idToken}
+        viewerId={identity.idToken}
+        displayName={identity.displayName}
+        readOnly={false}
+      />
+    )}
+  </ConsentGate>
+)}
       </div>
     </div>
   );

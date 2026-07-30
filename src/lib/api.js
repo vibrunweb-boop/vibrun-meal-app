@@ -101,3 +101,11 @@ export function fetchTrainerMemberDetail(idToken, memberUserId) {
 export function checkIsTrainer(idToken) {
   return request('/api/trainer/check', { idToken });
 }
+
+export function getConsentStatus(idToken) {
+  return request('/api/consent', { idToken });
+}
+
+export function agreeToConsent(idToken) {
+  return request('/api/consent', { idToken, method: 'POST' });
+}
