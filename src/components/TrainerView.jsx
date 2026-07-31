@@ -388,23 +388,38 @@ const toggleWithdrawn = async (e, userId) => {
               const saltOver = m.totalSalt > targets.salt;
               const kcalOver = m.totalKcal > targets.calories * 1.15;
               const dotColor = saltOver ? COLORS.rose : kcalOver ? COLORS.gold : COLORS.sage;
-              return (
-                <button
-                  key={m.key}
-                  onClick={() => setSelected(m)}
-                  className="w-full flex items-center justify-between rounded-xl p-3.5 text-left"
-                  style={{ background: COLORS.card, border: `1px solid ${COLORS.border}` }}
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full" style={{ background: dotColor }} />
-                    <span style={{ color: COLORS.ink }} className="text-sm font-medium">{m.displayName}</span>
-                  </div>
-                  <span style={{ color: COLORS.inkSoft }} className="text-xs">
-                    {Math.round(m.totalKcal)} / {targets.calories} kcal
-                    {saltOver && <span style={{ color: COLORS.rose }}> ・塩分超過</span>}
-                  </span>
-                </button>
-              );
+             const isWithdrawn = withdrawnIds.includes(m.key);
+return (
+  <button
+    key={m.key}
+    onClick={() => setSelected(m)}
+    className="w-full flex items-center justify-between rounded-xl p-3.5 text-left"
+    style={{ background: COLORS.card, border: `1px solid ${COLORS.border}`, opacity: isWithdrawn ? 0.5 : 1 }}
+  >
+    <div className="flex items-center gap-2">
+      <span className="w-2 h-2 rounded-full" style={{ background: dotColor }} />
+      <span style={{ color: COLORS.ink }} className="text-sm font-medium">{m.displayName}</span>
+      {isWithdrawn && (
+        <span style={{ color: COLORS.rose }} className="text-[10px] px-1.5 py-0.5 rounded-full shrink-0" >
+          退会済み
+        </span>
+      )}
+    </div>
+    <div className="flex flex-col items-end gap-1 shrink-0">
+      <span style={{ color: COLORS.inkSoft }} className="text-xs whitespace-nowrap">
+        {Math.round(m.totalKcal)} / {targets.calories} kcal
+        {saltOver && <span style={{ color: COLORS.rose }}> ・塩分超過</span>}
+      </span>
+      <span
+        onClick={(e) => toggleWithdrawn(e, m.key)}
+        className="text-[11px] px-2 py-1 rounded-full whitespace-nowrap"
+        style={{ border: `1px solid ${COLORS.border}`, color: COLORS.inkSoft }}
+      >
+        {isWithdrawn ? '再開' : '退会処理'}
+      </span>
+    </div>
+  </button>
+);
             })}
           </div>
         </>
