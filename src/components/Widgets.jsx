@@ -489,11 +489,11 @@ export function RecipeManager({ recipeDb, ingredientDb, onSave, onDelete, onClos
         name: name.trim(),
         items: items.map((it) => ({ name: it.name, grams: it.grams })),
         calories: Math.round(totals.calories),
-        protein: round1(totals.protein),
-        fat: round1(totals.fat),
-        carbs: round1(totals.carbs),
-        fiber: round1(totals.fiber),
-        salt: round1(totals.salt),
+        protein: Math.round(totals.protein * 10) / 10,
+        fat: Math.round(totals.fat * 10) / 10,
+        carbs: Math.round(totals.carbs * 10) / 10,
+        fiber: Math.round(totals.fiber * 10) / 10,
+        salt: Math.round(totals.salt * 10) / 10,
       });
       setName('');
       setItems([]);
