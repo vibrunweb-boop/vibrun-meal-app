@@ -2,10 +2,12 @@ import { AuthError, verifyLineToken } from '../lib/auth.js';
 import { loadMemberData, saveMemberData, ensureRegistered, DEFAULT_TARGETS } from '../lib/memberData.js';
 import { assertActiveMember, WithdrawnError } from '../lib/membershipData.js';
 
+
 export default async function handler(req, res) {
   try {
     const { userId, displayName } = await verifyLineToken(req);
     await ensureRegistered(userId, displayName);
+    await assertActiveMember(userId);
 
     if (req.method === 'GET') {
       const data = await loadMemberData(userId);
@@ -41,6 +43,7 @@ export default async function handler(req, res) {
 
     return res.status(405).json({ error: 'Method not allowed' });
   } catch (err) {
+    if (err instanceof WithdrawnError) return res.status(403).json({ error: err.message });
     if (err instanceof AuthError) return res.status(401).json({ error: err.message });
     console.error(err);
     return res.status(500).json({ error: 'Internal error' });
