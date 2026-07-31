@@ -3,6 +3,7 @@ import { Settings, ChevronLeft, ChevronRight, User, Store, Check, Camera } from 
 import { COLORS, MEAL_TYPES, DEFAULT_TARGETS, formatDate, formatDateLabel, addDays, num } from '../lib/helpers.js';
 import * as api from '../lib/api.js';
 import { Gauge, PlateVisual, MealSection, TargetPanel, WeekChart, BarcodeScannerModal } from './Widgets.jsx';
+import { calculateDailyScore } from '../lib/score.js';
 
 function ProductRegisterSection({ productDb, onRegister }) {
   const EMPTY = { name: '', store: '', barcode: '', calories: '', protein: '', fat: '', carbs: '', fiber: '', salt: '', nutrients: '' };
@@ -168,6 +169,21 @@ function ProductRegisterSection({ productDb, onRegister }) {
     </div>
   );
 }
+function ScoreBadge({ score }) {
+  if (score === null) return null;
+  const color = score >= 80 ? COLORS.sage : score >= 50 ? COLORS.gold : COLORS.rose;
+  return (
+    <div className="flex flex-col items-center justify-center mb-3">
+      <div
+        className="w-16 h-16 rounded-full flex items-center justify-center"
+        style={{ border: `3px solid ${color}` }}
+      >
+        <span style={{ color }} className="text-xl font-semibold">{score}</span>
+      </div>
+      <span style={{ color: COLORS.inkSoft }} className="text-[11px] mt-1">今日の食事スコア</span>
+    </div>
+  );
+}
 
 export default function MemberDashboard({ ownerId, viewerId, displayName, readOnly, onBack }) {
   // ownerId:  表示対象(誰の記録を見せるか)
@@ -244,6 +260,8 @@ export default function MemberDashboard({ ownerId, viewerId, displayName, readOn
     { calories: 0, protein: 0, fat: 0, carbs: 0, fiber: 0, salt: 0 }
   );
 
+const score = calculateDailyScore(totals, data.targets);
+
   const addMeal = async (mealType, entry) => {
     try {
       const meal = await api.addMealEntry(viewerId, mealType, selectedDate, entry);
@@ -315,6 +333,7 @@ export default function MemberDashboard({ ownerId, viewerId, displayName, readOn
       </div>
 
       <div className="rounded-xl p-5 mb-3" style={{ background: COLORS.card, border: `1px solid ${COLORS.border}` }}>
+        <ScoreBadge score={score} />
         <PlateVisual protein={totals.protein} fat={totals.fat} carbs={totals.carbs} />
         <div className="text-center mt-2 mb-4">
           <span style={{ color: COLORS.ink }} className="text-2xl font-semibold">{Math.round(totals.calories)}</span>
