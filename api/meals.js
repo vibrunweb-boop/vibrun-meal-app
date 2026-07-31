@@ -1,5 +1,6 @@
 import { AuthError, verifyLineToken } from '../lib/auth.js';
 import { loadMemberData, saveMemberData, ensureRegistered, DEFAULT_TARGETS } from '../lib/memberData.js';
+import { assertActiveMember, WithdrawnError } from '../lib/membershipData.js';
 
 export default async function handler(req, res) {
   try {

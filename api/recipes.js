@@ -31,6 +31,7 @@ export default async function handler(req, res) {
 
     return res.status(405).json({ error: 'Method not allowed' });
   } catch (err) {
+    if (err instanceof WithdrawnError) return res.status(403).json({ error: err.message });
     if (err instanceof AuthError) return res.status(401).json({ error: err.message });
     console.error(err);
     return res.status(500).json({ error: 'Internal error' });

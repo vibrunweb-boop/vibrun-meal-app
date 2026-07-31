@@ -119,3 +119,9 @@ export function saveRecipeApi(idToken, recipe) {
 export function deleteRecipeApi(idToken, id) {
   return request(`/api/recipes?id=${id}`, { idToken, method: 'DELETE' });
 }
+export function fetchWithdrawnMembers(idToken) {
+  return request('/api/trainer/membership', { idToken });
+}
+export function setMemberWithdrawn(idToken, userId, withdrawn) {
+  return request('/api/trainer/membership', { idToken, method: 'POST', body: { userId, withdrawn } });
+}

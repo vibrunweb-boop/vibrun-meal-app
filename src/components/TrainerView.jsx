@@ -300,21 +300,35 @@ export default function TrainerView({ trainerId }) {
   const [selected, setSelected] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [withdrawnIds, setWithdrawnIds] = useState([]);
 
   useEffect(() => {
-    (async () => {
-      setLoading(true);
-      setError('');
-      try {
-        const list = await api.fetchTrainerMembers(trainerId);
-        setMembers(list);
-      } catch (err) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, [trainerId]);
+  (async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const [list, membership] = await Promise.all([
+        api.fetchTrainerMembers(trainerId),
+        api.fetchWithdrawnMembers(trainerId),
+      ]);
+      setMembers(list);
+      setWithdrawnIds(membership.withdrawnUserIds);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  })();
+}, [trainerId]);
+const toggleWithdrawn = async (e, userId) => {
+  e.stopPropagation(); // 会員詳細画面に遷移しないようにする
+  try {
+    const membership = await api.setMemberWithdrawn(trainerId, userId, !withdrawnIds.includes(userId));
+    setWithdrawnIds(membership.withdrawnUserIds);
+  } catch (err) {
+    console.error(err);
+  }
+};
 
   if (selected) {
     return (

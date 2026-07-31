@@ -4,6 +4,7 @@ import { loadMemberData, saveMemberData } from '../lib/memberData.js';
 export default async function handler(req, res) {
   try {
     const userId = await getUserId(req);
+    await assertActiveMember(userId);
     const data = await loadMemberData(userId);
 
     if (req.method === 'GET') {
