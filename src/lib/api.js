@@ -109,3 +109,13 @@ export function getConsentStatus(idToken) {
 export function agreeToConsent(idToken) {
   return request('/api/consent', { idToken, method: 'POST' });
 }
+
+export function fetchRecipes(idToken) {
+  return request('/api/recipes', { idToken });
+}
+export function saveRecipeApi(idToken, recipe) {
+  return request('/api/recipes', { idToken, method: 'POST', body: recipe });
+}
+export function deleteRecipeApi(idToken, id) {
+  return request(`/api/recipes?id=${id}`, { idToken, method: 'DELETE' });
+}

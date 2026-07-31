@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip } from 'recharts';
-import { Plus, Check, Store, Wheat, Camera, Trash2, RotateCcw } from 'lucide-react';
+import { Plus, Check, Store, Wheat, Camera, Trash2, RotateCcw, BookOpen } from 'lucide-react';
 import { COLORS, num, uid, scaleIngredient, addDays, formatDateLabel } from '../lib/helpers.js';
 
 export function Gauge({ label, value, target, unit, color, danger }) {
@@ -148,7 +148,7 @@ export function BarcodeScannerModal({ onDetect, onClose }) {
   );
 }
 
-export function AddEntryForm({ onAdd, onCancel, ingredientDb, productDb, onUseProduct }) {
+export function AddEntryForm({ onAdd, onCancel, ingredientDb, productDb, recipeDb, onUseProduct }) {
   const [name, setName] = useState('');
   const [selected, setSelected] = useState(null); // { source: 'ingredient'|'product', ...data }
   const [grams, setGrams] = useState('100');
@@ -158,15 +158,16 @@ export function AddEntryForm({ onAdd, onCancel, ingredientDb, productDb, onUsePr
 
   const suggestions = useMemo(() => {
     const q = name.trim();
-    if (!q || selected) return [];
-    const pool = [
-      ...ingredientDb.map((i) => ({ ...i, source: 'ingredient' })),
-      ...productDb.map((p) => ({ ...p, source: 'product' })),
-    ];
-    const starts = pool.filter((i) => i.name.startsWith(q));
-    const includes = pool.filter((i) => !i.name.startsWith(q) && i.name.includes(q));
-    return [...starts, ...includes].slice(0, 6);
-  }, [name, selected, ingredientDb, productDb]);
+  if (!q || selected) return [];
+  const pool = [
+    ...ingredientDb.map((i) => ({ ...i, source: 'ingredient' })),
+    ...productDb.map((p) => ({ ...p, source: 'product' })),
+    ...recipeDb.map((r) => ({ ...r, source: 'recipe' })),
+  ];
+  const starts = pool.filter((i) => i.name.startsWith(q));
+  const includes = pool.filter((i) => !i.name.startsWith(q) && i.name.includes(q));
+  return [...starts, ...includes].slice(0, 6);
+}, [name, selected, ingredientDb, productDb, recipeDb]);
 
   const handleNameChange = (e) => {
     const v = e.target.value;
@@ -287,13 +288,20 @@ export function AddEntryForm({ onAdd, onCancel, ingredientDb, productDb, onUsePr
                 <span className="flex items-center gap-1.5" style={{ color: COLORS.ink }}>
                   {s.source === 'ingredient' ? (
                     <Wheat size={12} style={{ color: COLORS.sage }} />
-                  ) : (
+                  ) : s.source === 'recipe' ? (
+                    <BookOpen size={12} style={{ color: COLORS.gold }} />
+                  ) : (  
                     <Store size={12} style={{ color: COLORS.terracotta }} />
                   )}
                   {s.name}
                 </span>
                 <span style={{ color: COLORS.inkSoft }}>
-                  {s.source === 'ingredient' ? `${s.calories}kcal/100g` : `${s.calories}kcal${s.store ? ' ・' + s.store : ''}`}
+                  {s.source === 'ingredient'
+                    ? `${s.calories}kcal/100g`
+                    : s.source === 'recipe'
+                    ? `${s.calories}kcal`
+                    : `${s.calories}kcal${s.store ? `(${s.store})` : ''}`}
+  
                 </span>
               </button>
             ))}
@@ -367,7 +375,7 @@ export function AddEntryForm({ onAdd, onCancel, ingredientDb, productDb, onUsePr
   );
 }
 
-export function MealSection({ mealLabel, entries, onAdd, onDelete, readOnly, ingredientDb, productDb, onUseProduct }) {
+export function MealSection({ mealLabel, entries, onAdd, onDelete, readOnly, ingredientDb, productDb, recipeDb, onUseProduct }) {
   const [adding, setAdding] = useState(false);
   const subtotal = entries.reduce((s, e) => s + e.calories, 0);
   return (
@@ -411,6 +419,7 @@ export function MealSection({ mealLabel, entries, onAdd, onDelete, readOnly, ing
         <AddEntryForm
           ingredientDb={ingredientDb}
           productDb={productDb}
+          recipeDb={recipeDb}
           onUseProduct={onUseProduct}
           onAdd={(entry) => {
             onAdd(entry);
@@ -424,6 +433,182 @@ export function MealSection({ mealLabel, entries, onAdd, onDelete, readOnly, ing
           まだ記録がありません
         </p>
       )}
+    </div>
+  );
+}
+
+export function RecipeManager({ recipeDb, ingredientDb, onSave, onDelete, onClose }) {
+  const [name, setName] = useState('');
+  const [items, setItems] = useState([]); // [{ ingredientId, name, grams }]
+  const [query, setQuery] = useState('');
+  const [message, setMessage] = useState('');
+
+  const suggestions = useMemo(() => {
+    const q = query.trim();
+    if (!q) return [];
+    return ingredientDb.filter((i) => i.name.includes(q)).slice(0, 6);
+  }, [query, ingredientDb]);
+
+  const addItem = (ing) => {
+    setItems((prev) => [...prev, { ingredientId: ing.id, name: ing.name, grams: 100 }]);
+    setQuery('');
+  };
+  const updateGrams = (idx, g) => {
+    setItems((prev) => prev.map((it, i) => (i === idx ? { ...it, grams: g } : it)));
+  };
+  const removeItem = (idx) => {
+    setItems((prev) => prev.filter((_, i) => i !== idx));
+  };
+
+  const totals = useMemo(() => {
+    return items.reduce(
+      (acc, it) => {
+        const ing = ingredientDb.find((i) => i.id === it.ingredientId);
+        if (!ing) return acc;
+        const s = scaleIngredient(ing, it.grams);
+        return {
+          calories: acc.calories + s.calories,
+          protein: acc.protein + s.protein,
+          fat: acc.fat + s.fat,
+          carbs: acc.carbs + s.carbs,
+          fiber: acc.fiber + (s.fiber || 0),
+          salt: acc.salt + s.salt,
+        };
+      },
+      { calories: 0, protein: 0, fat: 0, carbs: 0, fiber: 0, salt: 0 }
+    );
+  }, [items, ingredientDb]);
+
+  const submit = async () => {
+    if (!name.trim() || items.length === 0) {
+      setMessage('レシピ名と食材を入力してください');
+      return;
+    }
+    try {
+      await onSave({
+        name: name.trim(),
+        items: items.map((it) => ({ name: it.name, grams: it.grams })),
+        calories: Math.round(totals.calories),
+        protein: round1(totals.protein),
+        fat: round1(totals.fat),
+        carbs: round1(totals.carbs),
+        fiber: round1(totals.fiber),
+        salt: round1(totals.salt),
+      });
+      setName('');
+      setItems([]);
+      setMessage('保存しました');
+    } catch (err) {
+      setMessage(`保存に失敗しました: ${err.message}`);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-20 flex items-end sm:items-center justify-center" style={{ background: '#00000055' }} onClick={onClose}>
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="w-full sm:w-96 rounded-t-2xl sm:rounded-2xl p-5 max-h-[85vh] overflow-y-auto"
+        style={{ background: COLORS.card }}
+      >
+        <h3 style={{ fontFamily: "'Shippori Mincho', serif", color: COLORS.ink }} className="text-lg mb-3">
+          マイレシピ
+        </h3>
+
+        <div className="mb-4 pb-4" style={{ borderBottom: `1px dashed ${COLORS.border}` }}>
+          <p style={{ color: COLORS.inkSoft }} className="text-xs mb-2">登録済みのレシピ(他の会員には表示されません)</p>
+          {recipeDb.length === 0 && <p style={{ color: COLORS.inkSoft }} className="text-xs">まだレシピがありません</p>}
+          <ul className="space-y-1">
+            {recipeDb.map((r) => (
+              <li key={r.id} className="flex justify-between items-center text-xs">
+                <span style={{ color: COLORS.ink }}>{r.name}</span>
+                <div className="flex items-center gap-2">
+                  <span style={{ color: COLORS.inkSoft }}>{Math.round(r.calories)}kcal</span>
+                  <button onClick={() => onDelete(r.id)} style={{ color: COLORS.inkSoft }}>
+                    <Trash2 size={13} />
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <p style={{ color: COLORS.inkSoft }} className="text-xs mb-2">新しいレシピを作る</p>
+        <input
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="レシピ名(例: 生姜焼き)"
+          className="w-full mb-2 px-2 py-1.5 rounded text-sm outline-none"
+          style={{ border: `1px solid ${COLORS.border}`, background: COLORS.bg, color: COLORS.ink }}
+        />
+
+        <div className="relative mb-2">
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="食材を検索して追加"
+            className="w-full px-2 py-1.5 rounded text-sm outline-none"
+            style={{ border: `1px solid ${COLORS.border}`, background: COLORS.bg, color: COLORS.ink }}
+          />
+          {suggestions.length > 0 && (
+            <div className="absolute z-10 left-0 right-0 mt-1 rounded-lg overflow-hidden" style={{ background: COLORS.card, border: `1px solid ${COLORS.border}` }}>
+              {suggestions.map((ing) => (
+                <button
+                  key={ing.id}
+                  onClick={() => addItem(ing)}
+                  className="w-full text-left px-2.5 py-1.5 text-xs"
+                  style={{ color: COLORS.ink }}
+                >
+                  {ing.name}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {items.length > 0 && (
+          <ul className="space-y-1.5 mb-3">
+            {items.map((it, idx) => (
+              <li key={idx} className="flex items-center gap-2 text-xs">
+                <span style={{ color: COLORS.ink }} className="flex-1">{it.name}</span>
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  value={it.grams}
+                  onChange={(e) => updateGrams(idx, num(e.target.value))}
+                  className="w-16 px-1.5 py-1 rounded text-xs text-center outline-none"
+                  style={{ border: `1px solid ${COLORS.border}`, background: COLORS.bg, color: COLORS.ink }}
+                />
+                <span style={{ color: COLORS.inkSoft }}>g</span>
+                <button onClick={() => removeItem(idx)} style={{ color: COLORS.inkSoft }}>
+                  <Trash2 size={13} />
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {items.length > 0 && (
+          <p style={{ color: COLORS.inkSoft }} className="text-xs mb-3">
+            合計: 約{Math.round(totals.calories)}kcal
+          </p>
+        )}
+
+        <div className="flex items-center justify-between">
+          <span style={{ color: COLORS.sage }} className="text-xs">{message}</span>
+          <div className="flex gap-2">
+            <button onClick={onClose} className="text-xs px-3 py-1.5 rounded" style={{ color: COLORS.inkSoft }}>
+              閉じる
+            </button>
+            <button
+              onClick={submit}
+              className="text-xs px-4 py-1.5 rounded font-medium flex items-center gap-1"
+              style={{ background: COLORS.terracotta, color: '#fff' }}
+            >
+              <Check size={14} /> 保存する
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

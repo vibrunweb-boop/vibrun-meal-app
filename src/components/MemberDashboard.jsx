@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Settings, ChevronLeft, ChevronRight, User, Store, Check, Camera } from 'lucide-react';
+import { Settings, ChevronLeft, ChevronRight, User, Store, Check, Camera, BookOpen } from 'lucide-react';
 import { COLORS, MEAL_TYPES, DEFAULT_TARGETS, formatDate, formatDateLabel, addDays, num } from '../lib/helpers.js';
 import * as api from '../lib/api.js';
-import { Gauge, PlateVisual, MealSection, TargetPanel, WeekChart, BarcodeScannerModal } from './Widgets.jsx';
+import { Gauge, PlateVisual, MealSection, TargetPanel, WeekChart, BarcodeScannerModal, RecipeManager } from './Widgets.jsx';
 import { calculateDailyScore } from '../lib/score.js';
 
 function ProductRegisterSection({ productDb, onRegister }) {
@@ -193,6 +193,8 @@ export default function MemberDashboard({ ownerId, viewerId, displayName, readOn
   const [data, setData] = useState(null);
   const [ingredientDb, setIngredientDb] = useState([]);
   const [productDb, setProductDb] = useState([]);
+  const [recipeDb, setRecipeDb] = useState([]);
+  const [showRecipes, setShowRecipes] = useState(false);
   const [selectedDate, setSelectedDate] = useState(formatDate(new Date()));
   const [showTargets, setShowTargets] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -209,9 +211,10 @@ export default function MemberDashboard({ ownerId, viewerId, displayName, readOn
       } else {
         const d = await api.fetchMemberData(viewerId);
         setData(d);
-        const [ing, prod] = await Promise.all([api.fetchIngredientDb(), api.fetchProductDb()]);
+        const [ing, prod, rec] = await Promise.all([api.fetchIngredientDb(), api.fetchProductDb(), api.fetchRecipes(viewerId)]);
         setIngredientDb(ing);
         setProductDb(prod);
+        setRecipeDb(rec);
       }
     } catch (err) {
       setError(err.message);
@@ -233,6 +236,16 @@ export default function MemberDashboard({ ownerId, viewerId, displayName, readOn
     }
   };
 
+  const saveRecipe = async (recipe) => {
+    const saved = await api.saveRecipeApi(viewerId, recipe);
+    setRecipeDb((prev) => [...prev, saved]);
+  };
+  
+  const deleteRecipeHandler = async (id) => {
+    await api.deleteRecipeApi(viewerId, id);
+    setRecipeDb((prev) => prev.filter((r) => r.id !== id));
+  };  
+  
   const registerProduct = async (entry) => {
     const { isNew } = await api.registerOrUpdateProduct(viewerId, entry);
     const fresh = await api.fetchProductDb();
@@ -310,10 +323,15 @@ const score = calculateDailyScore(totals, data.targets);
           <span style={{ color: COLORS.ink }} className="font-medium text-sm">{displayName}</span>
         </div>
         {!readOnly && (
-          <button onClick={() => setShowTargets(true)} style={{ color: COLORS.inkSoft }}>
-            <Settings size={18} />
-          </button>
-        )}
+          <div className="flex items-center gap-3">
+            <button onClick={() => setShowRecipes(true)} style={{ color: COLORS.inkSoft }}>
+              <BookOpen size={18} />
+            </button>
+            <button onClick={() => setShowTargets(true)} style={{ color: COLORS.inkSoft }}>
+              <Settings size={18} />
+            </button>
+          </div>
+        )}     
       </div>
 
       <div className="flex items-center justify-center gap-4 mb-4">
@@ -356,6 +374,7 @@ const score = calculateDailyScore(totals, data.targets);
           readOnly={readOnly}
           ingredientDb={ingredientDb}
           productDb={productDb}
+          recipeDb={recipeDb}
           onUseProduct={incrementProductUse}
         />
       ))}
@@ -367,6 +386,15 @@ const score = calculateDailyScore(totals, data.targets);
       {showTargets && (
         <TargetPanel targets={data.targets} onSave={saveTargets} onClose={() => setShowTargets(false)} onReset={resetData} />
       )}
-    </div>
+      {showRecipes && (
+        <RecipeManager
+          recipeDb={recipeDb}
+          ingredientDb={ingredientDb}
+          onSave={saveRecipe}
+          onDelete={deleteRecipeHandler}
+          onClose={() => setShowRecipes(false)}
+         />
+       )}
+     </div>
   );
 }
