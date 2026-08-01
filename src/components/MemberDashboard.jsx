@@ -98,19 +98,9 @@ function ProductRegisterSection({ productDb, onRegister }) {
           className="flex-1 px-2 py-1.5 rounded text-sm outline-none"
           style={{ border: `1px solid ${COLORS.border}`, background: COLORS.bg, color: COLORS.ink }}
         />
-        <button
-          onClick={() => {
-            setMessage('');
-            setShowScanner(true);
-          }}
-          className="px-2 rounded flex items-center justify-center"
-          style={{ border: `1px solid ${COLORS.border}`, background: COLORS.bg, color: COLORS.terracotta }}
-          title="バーコードでスキャン"
-        >
-          <Camera size={16} />
-        </button>
+
       </div>
-      {showScanner && <BarcodeScannerModal onDetect={handleScan} onClose={() => setShowScanner(false)} />}
+      
       <div className="grid grid-cols-3 gap-1.5 mb-2">
         {[
           ['calories', 'kcal'],

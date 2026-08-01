@@ -256,17 +256,7 @@ export function AddEntryForm({ onAdd, onCancel, ingredientDb, productDb, recipeD
           className="flex-1 mb-1 px-2 py-1.5 rounded text-sm outline-none"
           style={{ border: `1px solid ${COLORS.border}`, background: COLORS.card, color: COLORS.ink }}
         />
-        <button
-          onClick={() => {
-            setScanMessage('');
-            setShowScanner(true);
-          }}
-          className="mb-1 px-2 rounded flex items-center justify-center"
-          style={{ border: `1px solid ${COLORS.border}`, background: COLORS.card, color: COLORS.terracotta }}
-          title="バーコードでスキャン"
-        >
-          <Camera size={16} />
-        </button>
+      
         {suggestions.length > 0 && (
           <div
             className="absolute z-10 left-0 right-0 rounded-lg overflow-hidden shadow-md"
@@ -307,7 +297,6 @@ export function AddEntryForm({ onAdd, onCancel, ingredientDb, productDb, recipeD
         <p className="text-[11px] mb-2" style={{ color: COLORS.rose }}>{scanMessage}</p>
       )}
 
-      {showScanner && <BarcodeScannerModal onDetect={handleBarcodeDetect} onClose={() => setShowScanner(false)} />}
 
       {selected && (
         <p className="text-[11px] mb-2" style={{ color: selected.source === 'ingredient' ? COLORS.sage : COLORS.terracotta }}>
