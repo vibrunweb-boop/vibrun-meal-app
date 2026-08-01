@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip } from 'recharts';
 import { Plus, Check, Store, Wheat, Camera, Trash2, RotateCcw, BookOpen } from 'lucide-react';
 import { COLORS, num, uid, scaleIngredient, addDays, formatDateLabel } from '../lib/helpers.js';
+import liff from '@line/liff';
 
 export function Gauge({ label, value, target, unit, color, danger }) {
   const pct = target > 0 ? Math.min(100, (value / target) * 100) : 0;
@@ -58,71 +59,63 @@ export function PlateVisual({ protein, fat, carbs }) {
 }
 
 export function BarcodeScannerModal({ onDetect, onClose }) {
-  const videoRef = useRef(null);
-  const streamRef = useRef(null);
-  const rafRef = useRef(null);
-  const [status, setStatus] = useState('starting'); // starting | scanning | unsupported | error
+  const [status, setStatus] = useState('starting'); // starting | unsupported | error
   const [manualCode, setManualCode] = useState('');
 
   useEffect(() => {
     let cancelled = false;
+
     async function start() {
-      if (!('BarcodeDetector' in window)) {
-        setStatus('unsupported');
+      if (!liff.isInClient()) {
+        // LINEアプリ内で開いていない場合(PCブラウザでのテスト等)はスキャン非対応
+        if (!cancelled) setStatus('unsupported');
         return;
       }
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-        if (cancelled) {
-          stream.getTracks().forEach((t) => t.stop());
-          return;
+        const result = await liff.scanCodeV2();
+        if (cancelled) return;
+        if (result && result.value) {
+          onDetect(result.value);
+        } else {
+          // キャンセルされた場合
+          onClose();
         }
-        streamRef.current = stream;
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          await videoRef.current.play();
-        }
-        const detector = new window.BarcodeDetector({ formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128'] });
-        setStatus('scanning');
-        const tick = async () => {
-          if (cancelled) return;
-          try {
-            const codes = await detector.detect(videoRef.current);
-            if (codes.length > 0) {
-              onDetect(codes[0].rawValue);
-              return;
-            }
-          } catch (e) {}
-          rafRef.current = requestAnimationFrame(tick);
-        };
-        rafRef.current = requestAnimationFrame(tick);
       } catch (e) {
         if (!cancelled) setStatus('error');
       }
     }
+
     start();
     return () => {
       cancelled = true;
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
-      if (streamRef.current) streamRef.current.getTracks().forEach((t) => t.stop());
     };
-  }, [onDetect]);
+  }, [onDetect, onClose]);
 
   return (
-    <div className="fixed inset-0 z-30 flex items-center justify-center p-4" style={{ background: '#00000088' }} onClick={onClose}>
+    <div
+      className="fixed inset-0 z-30 flex items-center justify-center p-4"
+      style={{ background: '#00000088' }}
+      onClick={onClose}
+    >
       <div onClick={(e) => e.stopPropagation()} className="w-full sm:w-96 rounded-2xl p-4" style={{ background: COLORS.card }}>
         <h3 style={{ fontFamily: "'Shippori Mincho', serif", color: COLORS.ink }} className="text-base mb-2">
           バーコードをスキャン
         </h3>
-        {status === 'scanning' || status === 'starting' ? (
-          <div className="rounded-lg overflow-hidden mb-2" style={{ background: '#000', aspectRatio: '1' }}>
-            <video ref={videoRef} className="w-full h-full object-cover" muted playsInline />
-          </div>
-        ) : (
+
+        {status === 'starting' && (
           <p style={{ color: COLORS.inkSoft }} className="text-xs mb-3">
-            この環境ではカメラスキャンをご利用いただけません。バーコード番号を直接入力してください。
+            LINEのスキャン画面を起動しています…
           </p>
         )}
+
+        {(status === 'unsupported' || status === 'error') && (
+          <p style={{ color: COLORS.inkSoft }} className="text-xs mb-3">
+            {status === 'unsupported'
+              ? 'この環境ではカメラスキャンをご利用いただけません。バーコード番号を直接入力してください。'
+              : 'スキャンに失敗しました。バーコード番号を直接入力してください。'}
+          </p>
+        )}
+
         <div className="flex gap-2 mb-2">
           <input
             value={manualCode}
@@ -137,10 +130,11 @@ export function BarcodeScannerModal({ onDetect, onClose }) {
             className="px-3 py-1.5 rounded text-xs font-medium"
             style={{ background: COLORS.terracotta, color: '#fff' }}
           >
-            使う
+            確定
           </button>
         </div>
-        <button onClick={onClose} className="w-full text-center text-xs py-1.5" style={{ color: COLORS.inkSoft }}>
+
+        <button onClick={onClose} className="w-full text-xs px-3 py-1.5 rounded" style={{ color: COLORS.inkSoft }}>
           閉じる
         </button>
       </div>
