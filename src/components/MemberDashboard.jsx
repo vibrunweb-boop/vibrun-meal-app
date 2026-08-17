@@ -263,7 +263,7 @@ export default function MemberDashboard({ ownerId, viewerId, displayName, readOn
       fiber: acc.fiber + (m.fiber || 0),
       salt: acc.salt + m.salt,
     }),
-    { calories: 0, protein: 0, fat: 0, carbs: 0, fiber: 0, salt: 0 }
+    { calories: 0, protein: 0, fat: 0, carbs: 0, sugar: 0, fiber: 0, salt: 0 }
   );
 
 const score = calculateDailyScore(totals, data.targets);
