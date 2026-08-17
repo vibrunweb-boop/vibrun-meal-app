@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip } from 'recharts';
+import { PieChart, Pie, Cell, BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip } from 'recharts';
 import { Plus, Check, Store, Wheat, Camera, Trash2, RotateCcw, BookOpen } from 'lucide-react';
 import { COLORS, num, uid, scaleIngredient, addDays, formatDateLabel } from '../lib/helpers.js';
 import liff from '@line/liff';
@@ -650,6 +650,8 @@ export function TargetPanel({ targets, onSave, onClose, onReset }) {
 }
 
 export function WeekChart({ meals, selectedDate }) {
+  const [chartType, setChartType] = useState('bar'); // bar | line
+
   const days = useMemo(() => {
     const arr = [];
     for (let i = 6; i >= 0; i--) arr.push(addDays(selectedDate, -i));
@@ -659,19 +661,48 @@ export function WeekChart({ meals, selectedDate }) {
     day: formatDateLabel(d).replace(/\(.*\)/, ''),
     kcal: meals.filter((m) => m.date === d).reduce((s, m) => s + m.calories, 0),
   }));
+
   return (
     <div className="rounded-xl p-4 mb-3" style={{ background: COLORS.card, border: `1px solid ${COLORS.border}` }}>
-      <h3 style={{ fontFamily: "'Shippori Mincho', serif", color: COLORS.ink }} className="text-base mb-2">
-        直近7日間の推移
-      </h3>
+      <div className="flex items-center justify-between mb-2">
+        <h3 style={{ fontFamily: "'Shippori Mincho', serif", color: COLORS.ink }} className="text-base">
+          直近7日間の推移
+        </h3>
+        <div className="flex rounded-full p-0.5" style={{ background: COLORS.border }}>
+          <button
+            onClick={() => setChartType('bar')}
+            className="px-2.5 py-1 rounded-full text-[11px] font-medium"
+            style={{ background: chartType === 'bar' ? COLORS.terracotta : 'transparent', color: chartType === 'bar' ? '#fff' : COLORS.inkSoft }}
+          >
+            棒グラフ
+          </button>
+          <button
+            onClick={() => setChartType('line')}
+            className="px-2.5 py-1 rounded-full text-[11px] font-medium"
+            style={{ background: chartType === 'line' ? COLORS.terracotta : 'transparent', color: chartType === 'line' ? '#fff' : COLORS.inkSoft }}
+          >
+            折れ線グラフ
+          </button>
+        </div>
+      </div>
       <ResponsiveContainer width="100%" height={140}>
-        <BarChart data={data} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke={COLORS.border} vertical={false} />
-          <XAxis dataKey="day" tick={{ fontSize: 11, fill: COLORS.inkSoft }} axisLine={{ stroke: COLORS.border }} tickLine={false} />
-          <YAxis tick={{ fontSize: 10, fill: COLORS.inkSoft }} axisLine={false} tickLine={false} />
-          <Tooltip formatter={(v) => [`${Math.round(v)} kcal`, '']} contentStyle={{ fontSize: 12, borderRadius: 8, borderColor: COLORS.border }} />
-          <Bar dataKey="kcal" fill={COLORS.terracotta} radius={[4, 4, 0, 0]} />
-        </BarChart>
+        {chartType === 'bar' ? (
+          <BarChart data={data} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke={COLORS.border} vertical={false} />
+            <XAxis dataKey="day" tick={{ fontSize: 11, fill: COLORS.inkSoft }} axisLine={{ stroke: COLORS.border }} tickLine={false} />
+            <YAxis tick={{ fontSize: 10, fill: COLORS.inkSoft }} axisLine={false} tickLine={false} />
+            <Tooltip formatter={(v) => [`${Math.round(v)} kcal`, '']} contentStyle={{ fontSize: 12, borderRadius: 8, borderColor: COLORS.border }} />
+            <Bar dataKey="kcal" fill={COLORS.terracotta} radius={[4, 4, 0, 0]} />
+          </BarChart>
+        ) : (
+          <LineChart data={data} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke={COLORS.border} vertical={false} />
+            <XAxis dataKey="day" tick={{ fontSize: 11, fill: COLORS.inkSoft }} axisLine={{ stroke: COLORS.border }} tickLine={false} />
+            <YAxis tick={{ fontSize: 10, fill: COLORS.inkSoft }} axisLine={false} tickLine={false} />
+            <Tooltip formatter={(v) => [`${Math.round(v)} kcal`, '']} contentStyle={{ fontSize: 12, borderRadius: 8, borderColor: COLORS.border }} />
+            <Line type="monotone" dataKey="kcal" stroke={COLORS.terracotta} strokeWidth={2} dot={{ r: 3, fill: COLORS.terracotta }} />
+          </LineChart>
+        )}
       </ResponsiveContainer>
     </div>
   );
