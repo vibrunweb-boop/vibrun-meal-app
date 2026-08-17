@@ -88,6 +88,10 @@ export function deleteProductAdmin(idToken, id) {
   return request('/api/products', { idToken, method: 'DELETE', body: { id } });
 }
 
+export function updateMealEntry(idToken, id, fields) {
+  return request('/api/meals', { idToken, method: 'PUT', body: { id, ...fields } });
+}
+
 // --- トレーナー専用 -------------------------------------------------------
 
 export function fetchTrainerMembers(idToken) {

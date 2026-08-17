@@ -6,7 +6,7 @@ import { Gauge, PlateVisual, MealSection, TargetPanel, WeekChart, BarcodeScanner
 import { calculateDailyScore } from '../lib/score.js';
 
 function ProductRegisterSection({ productDb, onRegister }) {
-  const EMPTY = { name: '', store: '', barcode: '', calories: '', protein: '', fat: '', carbs: '', fiber: '', salt: '', nutrients: '' };
+  const EMPTY = { name: '', store: '', barcode: '', calories: '', protein: '', fat: '', carbs: '', sugar: '', fiber: '', salt: '', nutrients: '' };
   const [form, setForm] = useState(EMPTY);
   const [message, setMessage] = useState('');
   const [showScanner, setShowScanner] = useState(false);
@@ -48,6 +48,7 @@ function ProductRegisterSection({ productDb, onRegister }) {
       protein: num(form.protein),
       fat: num(form.fat),
       carbs: num(form.carbs),
+      sugar: num(form.sugar),
       fiber: num(form.fiber),
       salt: num(form.salt),
       nutrients: form.nutrients.trim(),
@@ -107,6 +108,7 @@ function ProductRegisterSection({ productDb, onRegister }) {
           ['protein', 'P(g)'],
           ['fat', 'F(g)'],
           ['carbs', 'C(g)'],
+          ['sugar', '糖質(g)'],
           ['fiber', '食物繊維(g)'],
           ['salt', '塩分(g)'],
         ].map(([k, ph]) => (
@@ -257,6 +259,7 @@ export default function MemberDashboard({ ownerId, viewerId, displayName, readOn
       protein: acc.protein + m.protein,
       fat: acc.fat + m.fat,
       carbs: acc.carbs + m.carbs,
+      sugar: acc.sugar + (m.sugar || 0),
       fiber: acc.fiber + (m.fiber || 0),
       salt: acc.salt + m.salt,
     }),
@@ -281,6 +284,14 @@ const score = calculateDailyScore(totals, data.targets);
       console.error(err);
     }
   };
+  const editMeal = async (id, fields) => {
+  try {
+    const updated = await api.updateMealEntry(viewerId, id, fields);
+    setData((prev) => ({ ...prev, meals: prev.meals.map((m) => (m.id === id ? updated : m)) }));
+  } catch (err) {
+    console.error(err);
+  }
+};
   const saveTargets = async (targets) => {
     try {
       const updated = await api.updateTargets(viewerId, targets);
@@ -350,6 +361,7 @@ const score = calculateDailyScore(totals, data.targets);
         <Gauge label="たんぱく質" value={totals.protein} target={data.targets.protein} unit="g" color={COLORS.terracotta} />
         <Gauge label="脂質" value={totals.fat} target={data.targets.fat} unit="g" color={COLORS.gold} />
         <Gauge label="炭水化物" value={totals.carbs} target={data.targets.carbs} unit="g" color={COLORS.sage} />
+        <Gauge label="糖質" value={totals.sugar} target={data.targets.sugar ?? DEFAULT_TARGETS.sugar} unit="g" color={COLORS.terracotta} />
         <Gauge label="食物繊維" value={totals.fiber} target={data.targets.fiber} unit="g" color={COLORS.gold} />
         <Gauge label="塩分" value={totals.salt} target={data.targets.salt} unit="g" color={COLORS.rose} danger />
       </div>
@@ -361,6 +373,7 @@ const score = calculateDailyScore(totals, data.targets);
           entries={todaysMeals.filter((m) => m.mealType === mt.key)}
           onAdd={(entry) => addMeal(mt.key, entry)}
           onDelete={deleteMeal}
+          onEdit={editMeal}
           readOnly={readOnly}
           ingredientDb={ingredientDb}
           productDb={productDb}

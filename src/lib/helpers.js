@@ -17,7 +17,7 @@ export const MEAL_TYPES = [
   { key: 'snack', label: '間食' },
 ];
 
-export const DEFAULT_TARGETS = { calories: 2000, protein: 120, fat: 55, carbs: 250, fiber: 18, salt: 7 };
+export const DEFAULT_TARGETS = { calories: 2000, protein: 120, fat: 55, carbs: 250, sugar: 50, fiber: 18, salt: 7 };
 
 export function formatDate(d) {
   const y = d.getFullYear();
@@ -62,6 +62,7 @@ export function scaleIngredient(ing, grams) {
     protein: round1(ing.protein * factor),
     fat: round1(ing.fat * factor),
     carbs: round1(ing.carbs * factor),
+    sugar: round1((ing.sugar || 0) * factor),
     fiber: round1((ing.fiber || 0) * factor),
     salt: round1(ing.salt * factor),
   };

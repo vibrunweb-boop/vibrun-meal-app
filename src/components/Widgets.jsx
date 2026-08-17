@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { PieChart, Pie, Cell, BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip } from 'recharts';
-import { Plus, Check, Store, Wheat, Camera, Trash2, RotateCcw, BookOpen } from 'lucide-react';
+import { Plus, Check, Store, Wheat, Camera, Trash2, RotateCcw, BookOpen, Pencil } from 'lucide-react';
 import { COLORS, num, uid, scaleIngredient, addDays, formatDateLabel } from '../lib/helpers.js';
 import liff from '@line/liff';
 
@@ -146,7 +146,7 @@ export function AddEntryForm({ onAdd, onCancel, ingredientDb, productDb, recipeD
   const [name, setName] = useState('');
   const [selected, setSelected] = useState(null); // { source: 'ingredient'|'product', ...data }
   const [grams, setGrams] = useState('100');
-  const [vals, setVals] = useState({ calories: '', protein: '', fat: '', carbs: '', fiber: '', salt: '' });
+  const [vals, setVals] = useState({ calories: '', protein: '', fat: '', carbs: '', sugar: '', fiber: '', salt: '' });
   const [showScanner, setShowScanner] = useState(false);
   const [scanMessage, setScanMessage] = useState('');
 
@@ -181,6 +181,7 @@ export function AddEntryForm({ onAdd, onCancel, ingredientDb, productDb, recipeD
         protein: String(item.protein),
         fat: String(item.fat),
         carbs: String(item.carbs),
+        sugar: String(item.sugar || 0),
         fiber: String(item.fiber || 0),
         salt: String(item.salt),
       });
@@ -194,6 +195,7 @@ export function AddEntryForm({ onAdd, onCancel, ingredientDb, productDb, recipeD
       protein: String(s.protein),
       fat: String(s.fat),
       carbs: String(s.carbs),
+      sugar: String(s.sugar),
       fiber: String(s.fiber),
       salt: String(s.salt),
     };
@@ -222,7 +224,7 @@ export function AddEntryForm({ onAdd, onCancel, ingredientDb, productDb, recipeD
     setName('');
     setSelected(null);
     setGrams('100');
-    setVals({ calories: '', protein: '', fat: '', carbs: '', fiber: '', salt: '' });
+    setVals({ calories: '', protein: '', fat: '', carbs: '', sugar: '', fiber: '', salt: '' });
     setScanMessage('');
   };
 
@@ -233,12 +235,21 @@ export function AddEntryForm({ onAdd, onCancel, ingredientDb, productDb, recipeD
       protein: num(vals.protein),
       fat: num(vals.fat),
       carbs: num(vals.carbs),
+      sugar: num(vals.sugar),
       fiber: num(vals.fiber),
       salt: num(vals.salt),
     };
     const finalName = selected?.source === 'ingredient' ? `${selected.name}(${num(grams) || 0}g)` : name.trim();
 
-    onAdd({ id: uid(), name: finalName, nutrients: selected?.nutrients || '', ...finalVals });
+    onAdd({
+      id: uid(),
+      name: finalName,
+      nutrients: selected?.nutrients || '',
+      sourceType: selected?.source || 'manual',
+      sourceId: selected?.id || null,
+     sourceGrams: selected?.source === 'ingredient' ? num(grams) : null,
+     ...finalVals,
+   });
 
     if (selected?.source === 'product') {
       onUseProduct(selected.id);
@@ -326,6 +337,7 @@ export function AddEntryForm({ onAdd, onCancel, ingredientDb, productDb, recipeD
           ['protein', 'P(g)'],
           ['fat', 'F(g)'],
           ['carbs', 'C(g)'],
+          ['sugar', '糖質(g)'],
           ['fiber', '食物繊維(g)'],
           ['salt', '塩分(g)'],
         ].map(([k, ph]) => (
@@ -358,8 +370,109 @@ export function AddEntryForm({ onAdd, onCancel, ingredientDb, productDb, recipeD
   );
 }
 
-export function MealSection({ mealLabel, entries, onAdd, onDelete, readOnly, ingredientDb, productDb, recipeDb, onUseProduct }) {
+function EntryEditForm({ entry, ingredientDb, onSave, onCancel }) {
+  const matchedIngredient = entry.sourceType === 'ingredient' ? ingredientDb.find((i) => i.id === entry.sourceId) : null;
+  const [grams, setGrams] = useState(entry.sourceGrams != null ? String(entry.sourceGrams) : '100');
+  const [vals, setVals] = useState({
+    calories: String(entry.calories),
+    protein: String(entry.protein),
+    fat: String(entry.fat),
+    carbs: String(entry.carbs),
+    sugar: String(entry.sugar || 0),
+    fiber: String(entry.fiber || 0),
+    salt: String(entry.salt),
+  });
+
+  const handleGramsChange = (e) => {
+    const g = e.target.value;
+    setGrams(g);
+    if (matchedIngredient) {
+      const s = scaleIngredient(matchedIngredient, g);
+      setVals({
+        calories: String(s.calories),
+        protein: String(s.protein),
+        fat: String(s.fat),
+        carbs: String(s.carbs),
+        sugar: String(s.sugar),
+        fiber: String(s.fiber),
+        salt: String(s.salt),
+      });
+    }
+  };
+
+  const setField = (k) => (e) => setVals({ ...vals, [k]: e.target.value });
+
+  const save = () => {
+    const fields = {
+      calories: num(vals.calories),
+      protein: num(vals.protein),
+      fat: num(vals.fat),
+      carbs: num(vals.carbs),
+      sugar: num(vals.sugar),
+      fiber: num(vals.fiber),
+      salt: num(vals.salt),
+    };
+    if (matchedIngredient) {
+      fields.sourceGrams = num(grams);
+      fields.name = `${matchedIngredient.name}(${num(grams) || 0}g)`;
+    }
+    onSave(fields);
+  };
+
+  return (
+    <div className="mt-1 mb-2 p-2.5 rounded-lg" style={{ background: COLORS.bg, border: `1px solid ${COLORS.border}` }}>
+      {matchedIngredient ? (
+        <div className="flex items-center gap-2 mb-2">
+          <label style={{ color: COLORS.inkSoft }} className="text-xs">重さ</label>
+          <input
+            type="number"
+            inputMode="decimal"
+            value={grams}
+            onChange={handleGramsChange}
+            className="w-20 px-2 py-1 rounded text-xs text-center outline-none"
+            style={{ border: `1px solid ${COLORS.border}`, background: COLORS.card, color: COLORS.ink }}
+          />
+          <span style={{ color: COLORS.inkSoft }} className="text-xs">g</span>
+        </div>
+      ) : (
+        <div className="grid grid-cols-3 gap-1.5 mb-2">
+          {[
+            ['calories', 'kcal'],
+            ['protein', 'P(g)'],
+            ['fat', 'F(g)'],
+            ['carbs', 'C(g)'],
+            ['sugar', '糖質(g)'],
+            ['fiber', '食物繊維(g)'],
+            ['salt', '塩分(g)'],
+          ].map(([k, ph]) => (
+            <input
+              key={k}
+              type="number"
+              inputMode="decimal"
+              value={vals[k]}
+              onChange={setField(k)}
+              placeholder={ph}
+              className="w-full px-1.5 py-1.5 rounded text-xs outline-none text-center"
+              style={{ border: `1px solid ${COLORS.border}`, background: COLORS.card, color: COLORS.ink }}
+            />
+          ))}
+        </div>
+      )}
+      <div className="flex justify-end gap-2">
+        <button onClick={onCancel} className="text-xs px-3 py-1 rounded" style={{ color: COLORS.inkSoft }}>
+          キャンセル
+        </button>
+        <button onClick={save} className="text-xs px-3 py-1 rounded font-medium" style={{ background: COLORS.terracotta, color: '#fff' }}>
+          保存
+        </button>
+      </div>
+    </div>
+  );
+}
+
+export function MealSection({ mealLabel, entries, onAdd, onDelete, onEdit, readOnly, ingredientDb, productDb, recipeDb, onUseProduct }) {
   const [adding, setAdding] = useState(false);
+  const [editingId, setEditingId] = useState(null);
   const subtotal = entries.reduce((s, e) => s + e.calories, 0);
   return (
     <div className="rounded-xl p-4 mb-3" style={{ background: COLORS.card, border: `1px solid ${COLORS.border}` }}>
@@ -379,22 +492,40 @@ export function MealSection({ mealLabel, entries, onAdd, onDelete, readOnly, ing
       {entries.length > 0 && (
         <ul className="mt-2 space-y-1">
           {entries.map((e) => (
-            <li key={e.id} className="flex justify-between items-start text-sm py-1" style={{ borderTop: `1px dashed ${COLORS.border}` }}>
-              <div>
-                <span style={{ color: COLORS.ink }}>{e.name}</span>
-                {e.nutrients && (
-                  <p style={{ color: COLORS.sage }} className="text-[10px] mt-0.5">豊富な栄養素: {e.nutrients}</p>
-                )}
-              </div>
-              <div className="flex items-center gap-2 pt-0.5">
-                <span style={{ color: COLORS.inkSoft }} className="text-xs">{Math.round(e.calories)}kcal</span>
-                {!readOnly && (
-                  <button onClick={() => onDelete(e.id)} style={{ color: COLORS.inkSoft }}>
-                    <Trash2 size={13} />
-                  </button>
-                )}
-              </div>
-            </li>
+            <li key={e.id} className="text-sm py-1" style={{ borderTop: `1px dashed ${COLORS.border}` }}>
+              <div className="flex justify-between items-start">
+                <div>
+                  <span style={{ color: COLORS.ink }}>{e.name}</span>
+                 {e.nutrients && (
+                   <p style={{ color: COLORS.sage }} className="text-[10px] mt-0.5">豊富な栄養素: {e.nutrients}</p>
+                 )}
+               </div>
+               <div className="flex items-center gap-2 pt-0.5">
+                 <span style={{ color: COLORS.inkSoft }} className="text-xs">{Math.round(e.calories)}kcal</span>
+                 {!readOnly && (
+                   <>
+                     <button onClick={() => setEditingId(editingId === e.id ? null : e.id)} style={{ color: COLORS.inkSoft }}>
+                       <Pencil size={13} />
+                     </button>
+                     <button onClick={() => onDelete(e.id)} style={{ color: COLORS.inkSoft }}>
+                       <Trash2 size={13} />
+                     </button>
+                   </>
+                 )}
+               </div>
+             </div>
+             {editingId === e.id && (
+               <EntryEditForm
+                 entry={e}
+                 ingredientDb={ingredientDb}
+                 onSave={(fields) => {
+                   onEdit(e.id, fields);
+                   setEditingId(null);
+                 }}
+                 onCancel={() => setEditingId(null)}
+               />
+             )}
+           </li>
           ))}
         </ul>
       )}
@@ -454,11 +585,12 @@ export function RecipeManager({ recipeDb, ingredientDb, onSave, onDelete, onClos
           protein: acc.protein + s.protein,
           fat: acc.fat + s.fat,
           carbs: acc.carbs + s.carbs,
+          sugar: acc.sugar + (s.sugar || 0),
           fiber: acc.fiber + (s.fiber || 0),
           salt: acc.salt + s.salt,
         };
       },
-      { calories: 0, protein: 0, fat: 0, carbs: 0, fiber: 0, salt: 0 }
+      { calories: 0, protein: 0, fat: 0, carbs: 0, sugar: 0, fiber: 0, salt: 0 }
     );
   }, [items, ingredientDb]);
 
@@ -475,6 +607,7 @@ export function RecipeManager({ recipeDb, ingredientDb, onSave, onDelete, onClos
         protein: Math.round(totals.protein * 10) / 10,
         fat: Math.round(totals.fat * 10) / 10,
         carbs: Math.round(totals.carbs * 10) / 10,
+        sugar: Math.round(totals.sugar * 10) / 10,
         fiber: Math.round(totals.fiber * 10) / 10,
         salt: Math.round(totals.salt * 10) / 10,
       });
@@ -613,6 +746,7 @@ export function TargetPanel({ targets, onSave, onClose, onReset }) {
           ['protein', 'たんぱく質 (g)'],
           ['fat', '脂質 (g)'],
           ['carbs', '炭水化物 (g)'],
+          ['sugar', '糖質(g)'],
           ['fiber', '食物繊維 (g)'],
           ['salt', '塩分 (g)'],
         ].map(([k, label]) => (

@@ -4,7 +4,7 @@ import { COLORS, DEFAULT_TARGETS, formatDate } from '../lib/helpers.js';
 import * as api from '../lib/api.js';
 import MemberDashboard from './MemberDashboard.jsx';
 
-const BLANK_EDIT_FORM = { name: '', store: '', barcode: '', calories: '', protein: '', fat: '', carbs: '', fiber: '', salt: '', nutrients: '' };
+const BLANK_EDIT_FORM = { name: '', store: '', barcode: '', calories: '', protein: '', fat: '', carbs: '', sugar: '', fiber: '', salt: '', nutrients: '' };
 
 function NutritionEditForm({ initial, showStore, onSave, onCancel, onDelete }) {
   const [form, setForm] = useState(initial);
@@ -43,6 +43,7 @@ function NutritionEditForm({ initial, showStore, onSave, onCancel, onDelete }) {
           ['protein', 'P(g)'],
           ['fat', 'F(g)'],
           ['carbs', 'C(g)'],
+          ['sugar', '糖質(g)'],
           ['fiber', '食物繊維(g)'],
           ['salt', '塩分(g)'],
         ].map(([k, ph]) => (
@@ -204,6 +205,7 @@ function DataManagementView({ trainerId }) {
       protein: Number(form.protein) || 0,
       fat: Number(form.fat) || 0,
       carbs: Number(form.carbs) || 0,
+      sugar: Number(form.sugar) || 0,
       fiber: Number(form.fiber) || 0,
       salt: Number(form.salt) || 0,
       nutrients: form.nutrients?.trim() || '',
@@ -217,6 +219,7 @@ function DataManagementView({ trainerId }) {
       protein: Number(form.protein) || 0,
       fat: Number(form.fat) || 0,
       carbs: Number(form.carbs) || 0,
+      sugar: Number(form.sugar) || 0,
       fiber: Number(form.fiber) || 0,
       salt: Number(form.salt) || 0,
       nutrients: form.nutrients?.trim() || '',
@@ -237,6 +240,7 @@ function DataManagementView({ trainerId }) {
       protein: Number(form.protein) || 0,
       fat: Number(form.fat) || 0,
       carbs: Number(form.carbs) || 0,
+      sugar: Number(form.sugar) || 0,
       fiber: Number(form.fiber) || 0,
       salt: Number(form.salt) || 0,
       nutrients: form.nutrients?.trim() || '',
@@ -252,6 +256,7 @@ function DataManagementView({ trainerId }) {
       protein: Number(form.protein) || 0,
       fat: Number(form.fat) || 0,
       carbs: Number(form.carbs) || 0,
+      sugar: Number(form.sugar) || 0,
       fiber: Number(form.fiber) || 0,
       salt: Number(form.salt) || 0,
       nutrients: form.nutrients?.trim() || '',

@@ -27,6 +27,25 @@ export default async function handler(req, res) {
       return res.status(201).json(meal);
     }
 
+    if (req.method === 'PUT') {
+      // body: { id, ...更新したいフィールド }
+      const { id, ...fields } = req.body;
+      if (!id) {
+        return res.status(400).json({ error: 'id は必須です' });
+      }
+      const data = await loadMemberData(userId);
+      const idx = data.meals.findIndex((m) => m.id === id);
+      if (idx === -1) {
+        return res.status(404).json({ error: '対象の記録が見つかりません' });
+      }
+      const updatedMeal = { ...data.meals[idx], ...fields };
+      const updatedMeals = [...data.meals];
+      updatedMeals[idx] = updatedMeal;
+      const updated = { ...data, meals: updatedMeals };
+      await saveMemberData(userId, updated);
+      return res.status(200).json(updatedMeal);
+    }
+
     if (req.method === 'DELETE') {
       const { id, resetAll } = req.body;
       if (resetAll) {
